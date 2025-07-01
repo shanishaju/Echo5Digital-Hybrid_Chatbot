@@ -293,7 +293,7 @@ function echo5_chatbot_hybrid_customize_settings_page() {
                 <tr valign="top">
                     <th scope="row">Header Background Color</th>
                     <td><input type="color" name="echo5_chatbot_hybrid_header_bg" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_header_bg', '#2d8cff')); ?>" /></td>
-                </tr>
+                </tr>                
                 <tr valign="top">
                     <th scope="row">Header Text Color</th>
                     <td><input type="color" name="echo5_chatbot_hybrid_header_text" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_header_text', '#ffffff')); ?>" /></td>
@@ -323,4 +323,16 @@ function echo5_chatbot_hybrid_customize_settings_page() {
         </form>
     </div>
     <?php
+}
+add_action('wp_footer', 'echo5_chatbot_custom_minimize_style');
+function echo5_chatbot_custom_minimize_style() {
+    $header_bg = get_option('echo5_chatbot_hybrid_header_bg', '#2d8cff');
+    echo '<style>
+        #echo5-chat-container.minimized #echo5-minimize-btn {
+            display: none;
+        }
+        #echo5-chat-header {
+            background: ' . esc_attr($header_bg) . ' !important;
+        }
+    </style>';
 }
