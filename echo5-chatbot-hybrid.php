@@ -14,7 +14,7 @@ define('ECHO5_CHATBOT_HYBRID_URL', plugin_dir_url(__FILE__));
 add_action('wp_enqueue_scripts', 'enqueue_echo5_chatbot_hybrid_scripts');
 
 function enqueue_echo5_chatbot_hybrid_scripts() {
-    $backend_url = get_option('echo5_chatbot_hybrid_backend_url', 'https://react-chatbot-99g6.vercel.app/chat');
+    $backend_url = get_option('echo5_chatbot_hybrid_backend_url', '');
     $openai_api_key = get_option('echo5_chatbot_hybrid_openai_key', '');
     $system_prompt = get_option('echo5_chatbot_hybrid_system_prompt', 'Hi! I’m Echo5 Digital’s expert virtual assistant. How can I help you today?');
     $faq = get_option('echo5_chatbot_hybrid_faq', '');
