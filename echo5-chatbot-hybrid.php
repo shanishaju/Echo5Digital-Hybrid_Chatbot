@@ -16,16 +16,23 @@ add_action('wp_enqueue_scripts', 'enqueue_echo5_chatbot_hybrid_scripts');
 function enqueue_echo5_chatbot_hybrid_scripts() {
     $backend_url = get_option('echo5_chatbot_hybrid_backend_url', 'https://react-chatbot-99g6.vercel.app/chat');
     $openai_api_key = get_option('echo5_chatbot_hybrid_openai_key', '');
-    $system_prompt = get_option('echo5_chatbot_hybrid_system_prompt', 'You are a helpful expert on our products.');
+    $system_prompt = get_option('echo5_chatbot_hybrid_system_prompt', 'Hi! I’m Echo5 Digital’s expert virtual assistant. How can I help you today?');
     $faq = get_option('echo5_chatbot_hybrid_faq', '');
-    wp_enqueue_style('echo5-chatbot-hybrid-style', ECHO5_CHATBOT_HYBRID_URL . 'css/echo5-chat-style.css', [], ECHO5_CHATBOT_HYBRID_VERSION);
-    wp_enqueue_script('echo5-chatbot-hybrid-js', ECHO5_CHATBOT_HYBRID_URL . 'js/echo5-chat-hybrid.js', ['jquery'], ECHO5_CHATBOT_HYBRID_VERSION, true);
+    $typing_color = get_option('echo5_chatbot_hybrid_typing_color', '#2d8cff');
+    $typing_speed = get_option('echo5_chatbot_hybrid_typing_speed', '1');
+    $bot_name = get_option('echo5_chatbot_hybrid_bot_name', 'Bot');
+    $node_static_url = 'https://static-files-chi.vercel.app/'; // <-- CHANGE THIS to your Node server static URL
+    wp_enqueue_style('echo5-chatbot-hybrid-style', $node_static_url . 'echo5-chat-style.css', [], ECHO5_CHATBOT_HYBRID_VERSION);
+    wp_enqueue_script('echo5-chatbot-hybrid-js', $node_static_url . 'echo5-chat-hybrid.js', ['jquery'], ECHO5_CHATBOT_HYBRID_VERSION, true);
     wp_localize_script('echo5-chatbot-hybrid-js', 'echo5_chatbot_hybrid_data', [
         'backend_url' => $backend_url,
         'openai_api_key' => $openai_api_key,
         'system_prompt' => $system_prompt,
         'faq' => $faq,
-        'plugin_url' => ECHO5_CHATBOT_HYBRID_URL
+        'plugin_url' => ECHO5_CHATBOT_HYBRID_URL,
+        'typing_color' => $typing_color,
+        'typing_speed' => $typing_speed,
+        'bot_name' => $bot_name
     ]);
 }
 
@@ -33,7 +40,9 @@ add_action('wp_footer', 'echo5_chatbot_hybrid_box');
 function echo5_chatbot_hybrid_box() {
     ?>
     <div id="echo5-chat-container" class="minimized">
-        <div id="echo5-chat-header">Chat with us!</div>
+        <div id="echo5-chat-header">Chat with us!
+            <button id="echo5-minimize-btn" style="float:right; background:none; border:none; font-size:18px; cursor:pointer; color:#fff; margin-left:10px;" title="Minimize">&minus;</button>
+        </div>
         <div id="echo5-chat-messages"></div>
         <div id="echo5-chat-input-area">
             <input id="echo5-chat-message-input" type="text" placeholder="Type your message..." />
@@ -41,8 +50,64 @@ function echo5_chatbot_hybrid_box() {
         </div>
     </div>
     <template id="echo5-typing-indicator-template">
-        <div class="echo5-typing-indicator">Bot is typing...</div>
+        <div class="echo5-typing-indicator">
+            <span class="echo5-typing-dots">
+                <span class="echo5-typing-dot"></span>
+                <span class="echo5-typing-dot"></span>
+                <span class="echo5-typing-dot"></span>
+            </span>
+        </div>
     </template>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var chatContainer = document.getElementById('echo5-chat-container');
+            if (chatContainer && chatContainer.classList.contains('minimized')) {
+                chatContainer.classList.remove('minimized');
+                // Greet when auto-opened
+                greetEcho5Chat();
+            }
+        }, 5000); // 5 seconds
+
+        // Greet when manually opened (if minimized class is removed by user interaction)
+        var chatHeader = document.getElementById('echo5-chat-header');
+        if (chatHeader) {
+            chatHeader.addEventListener('click', function(e) {
+                // Prevent minimize button from triggering maximize
+                if (e.target && e.target.id === 'echo5-minimize-btn') return;
+                var chatContainer = document.getElementById('echo5-chat-container');
+                if (chatContainer && chatContainer.classList.contains('minimized')) {
+                    chatContainer.classList.remove('minimized');
+                    greetEcho5Chat();
+                }
+            });
+        }
+
+        // Minimize button logic
+        var minimizeBtn = document.getElementById('echo5-minimize-btn');
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var chatContainer = document.getElementById('echo5-chat-container');
+                if (chatContainer && !chatContainer.classList.contains('minimized')) {
+                    chatContainer.classList.add('minimized');
+                }
+            });
+        }
+
+        function greetEcho5Chat() {
+            var messages = document.getElementById('echo5-chat-messages');
+            if (!messages) return;
+            // Prevent duplicate greetings
+            if (messages.querySelector('.echo5-greeting')) return;
+            var greetDiv = document.createElement('div');
+            greetDiv.className = 'echo5-chat-bubble echo5-chat-bubble-bot echo5-greeting';
+            greetDiv.textContent = window.echo5_chatbot_hybrid_data && window.echo5_chatbot_hybrid_data.system_prompt ? window.echo5_chatbot_hybrid_data.system_prompt : 'Hi! I’m Echo5 Digital’s expert virtual assistant. How can I help you today?';
+            messages.appendChild(greetDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    });
+    </script>
     <?php
 }
 
@@ -91,8 +156,8 @@ function echo5_chatbot_hybrid_api_settings_page() {
     <div class="wrap">
         <h1>Echo5 Chatbot API Settings</h1>
         <form method="post" action="options.php">
-            <?php settings_fields('echo5_chatbot_hybrid_settings'); ?>
-            <?php do_settings_sections('echo5_chatbot_hybrid_settings'); ?>
+            <?php settings_fields('echo5_chatbot_hybrid_api'); ?>
+            <?php do_settings_sections('echo5_chatbot_hybrid_api'); ?>
             <table class="form-table">
                 <tr valign="top">
                     <th scope="row">Backend URL</th>
@@ -121,6 +186,7 @@ function echo5_chatbot_hybrid_api_settings_page() {
         var keyInput = document.getElementById('echo5-chatbot-hybrid-openai-key');
         var testBackendBtn = document.getElementById('echo5-test-backend-url');
         var backendInput = document.getElementById('echo5-chatbot-hybrid-backend-url');
+        var toggleBackendBtn = document.getElementById('echo5-toggle-backend-url');
         if (testBtn) {
             testBtn.addEventListener('click', function() {
                 var key = keyInput.value.trim();
@@ -173,6 +239,10 @@ function echo5_chatbot_hybrid_api_settings_page() {
 }
 
 add_action('admin_init', function() {
+    // API settings in their own group
+    register_setting('echo5_chatbot_hybrid_api', 'echo5_chatbot_hybrid_openai_key');
+    register_setting('echo5_chatbot_hybrid_api', 'echo5_chatbot_hybrid_backend_url');
+    // Training/FAQ settings
     register_setting('echo5_chatbot_hybrid_settings', 'echo5_chatbot_hybrid_system_prompt');
     register_setting('echo5_chatbot_hybrid_settings', 'echo5_chatbot_hybrid_faq');
     // Appearance/Customize settings
@@ -181,6 +251,9 @@ add_action('admin_init', function() {
     register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_header_text');
     register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_bubble_user');
     register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_bubble_bot');
+    register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_typing_color');
+    register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_typing_speed');
+    register_setting('echo5_chatbot_hybrid_customize', 'echo5_chatbot_hybrid_bot_name');
 });
 
 function echo5_chatbot_hybrid_training_settings_page() {
@@ -193,7 +266,7 @@ function echo5_chatbot_hybrid_training_settings_page() {
             <table class="form-table">
                 <tr valign="top">
                     <th scope="row">System Prompt<br><small>Tell the AI how to behave (e.g. "You are a helpful expert on our products.")</small></th>
-                    <td><textarea name="echo5_chatbot_hybrid_system_prompt" rows="3" cols="70"><?php echo esc_textarea(get_option('echo5_chatbot_hybrid_system_prompt', 'You are a helpful expert on our products.')); ?></textarea></td>
+                    <td><textarea name="echo5_chatbot_hybrid_system_prompt" rows="3" cols="70"><?php echo esc_textarea(get_option('echo5_chatbot_hybrid_system_prompt', 'Hi! I’m Echo5 Digital’s expert virtual assistant. How can I help you today?')); ?></textarea></td>
                 </tr>
                 <tr valign="top">
                     <th scope="row">Custom FAQ Knowledge<br><small>Paste your FAQ or product info here. This will be injected into the AI context.</small></th>
@@ -233,26 +306,21 @@ function echo5_chatbot_hybrid_customize_settings_page() {
                     <th scope="row">Bot Bubble Color</th>
                     <td><input type="color" name="echo5_chatbot_hybrid_bubble_bot" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_bubble_bot', '#f1f0f0')); ?>" /></td>
                 </tr>
+                <tr valign="top">
+                    <th scope="row">Typing Indicator Color</th>
+                    <td><input type="color" name="echo5_chatbot_hybrid_typing_color" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_typing_color', '#2d8cff')); ?>" /></td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Typing Animation Speed (seconds)</th>
+                    <td><input type="number" name="echo5_chatbot_hybrid_typing_speed" min="0.2" step="0.1" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_typing_speed', '1')); ?>" /> <small>e.g. 1 = normal, 0.5 = fast, 2 = slow</small></td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Bot Display Name<br><small>The name shown for the AI in chat bubbles (e.g. "EchoBot", "Support AI").</small></th>
+                    <td><input type="text" name="echo5_chatbot_hybrid_bot_name" value="<?php echo esc_attr(get_option('echo5_chatbot_hybrid_bot_name', 'Bot')); ?>" size="40" /></td>
+                </tr>
             </table>
             <?php submit_button(); ?>
         </form>
     </div>
     <?php
 }
-
-// Secure REST API endpoint for OpenAI API key (admin only)
-add_action('rest_api_init', function () {
-    register_rest_route('echo5-chatbot/v1', '/openai-key', [
-        'methods' => 'GET',
-        'permission_callback' => function () {
-            return current_user_can('manage_options');
-        },
-        'callback' => function () {
-            $key = get_option('echo5_chatbot_hybrid_openai_key', '');
-            if (!$key) {
-                return new WP_Error('no_key', 'No API key set', ['status' => 404]);
-            }
-            return ['openai_key' => $key];
-        }
-    ]);
-});
